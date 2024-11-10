@@ -1,3 +1,5 @@
+### TODO: this is not bob2, either user bob2 or change name to our protocol name
+
 # Function to create a BOB2 formatted message
 def create_bob2_message(msg_type, payload):
     msg_type = msg_type.ljust(5)[:5]  # Ensure msg_type is exactly 5 characters
