@@ -50,8 +50,8 @@ class WildLifeTracker:
 
         self.heart_rate = random.uniform(*heart_rate_range)
         self.body_temperature = random.uniform(*body_temperature_range)
-        
-        # self.message_queue = queue.Queue()
+
+        self.message_queue = queue.Queue()
 
     def collect_data(self, source_ip, source_port):
         # Simulate changes
@@ -69,7 +69,7 @@ class WildLifeTracker:
         timestamp = time.time()
 
         data = {
-            "timestamp": timestamp,
+            "datetime": datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S"),
             "device_name": self.device_name,
             "latitude": self.latitude,
             "longitude": self.longitude,
@@ -101,89 +101,73 @@ class WildLifeTracker:
         # print('result of encrypt_data :',iv + encryptor.tag + ciphertext)
         return iv, encryptor.tag, ciphertext
 
-    # def sender_thread(self, secret_key):
-    #     while True:
-    #         try:
-    #             # Establish a persistent connection to the satellite
-    #             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    #                 s.connect((self.satellite_host, self.satellite_port))
-    #                 while True:
-    #                     # Wait for data to be available in the queue
-    #                     data = self.message_queue.get()
-    #                     # Process data
-    #                     checksum = self.calculate_checksum(data)
-    #                     data['checksum'] = checksum
-    #                     iv, tag, encrypted_data = self.encrypt_data(data, secret_key)
-    #                     message = {
-    #                         "iv": iv.hex(),
-    #                         "encrypted_data": encrypted_data.hex(),
-    #                         "tag": tag.hex(),
-    #                     }
-    #                     # Send the message
-    #                     final_message = json.dumps(message)
-    #                     print(
-    #                         f"\n[{self.device_name}] Data to be sent to satellite: {json.dumps(data, indent=4)}"
-    #                     )
-    #                     s.sendall(final_message.encode("utf-8"))
-    #                     print(f"\n[{self.device_name}] Sent encrypted data")
+    def sender_thread(self, secret_key):
 
-    #                     # Wait for acknowledgment
-    #                     ack = s.recv(1024).decode("utf-8")
-    #                     if ack:
-    #                         print(f"\n[{self.device_name}] Received acknowledgment: {ack}")
+        while True:
 
-    #                     time.sleep(5)
-    #         except socket.error as e:
-    #             print(f"[{self.device_name}] Connection error: {e}, retrying in 5 seconds...")
-    #             time.sleep(5)    
+            try:
+                # Establish a persistent connection to the satellite
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((self.satellite_host, self.satellite_port))
+                    self.source_ip, self.source_port = s.getsockname()
+                    print(
+                        f"[{self.device_name}] Connected to satellite at {self.satellite_host}:{self.satellite_port}"
+                    )
+                    print(
+                        f"[{self.device_name}] Tracker IP: {self.source_ip}, Tracker Port: {self.source_port}"
+                    )
+                    while True:
+                        # Wait for data to be available in the queue
+                        data = self.message_queue.get()
+                        # Process data
+                        checksum = self.calculate_checksum(data)
+                        data["checksum"] = checksum
+                        iv, tag, encrypted_data = self.encrypt_data(data, secret_key)
+                        message = {
+                            "iv": iv.hex(),
+                            "encrypted_data": encrypted_data.hex(),
+                            "tag": tag.hex(),
+                        }
+                        # Send the message
+                        final_message = json.dumps(message)
+                        print(
+                            f"\n[{self.device_name}] Data to be sent to satellite: {json.dumps(data, indent=4)}"
+                        )
+                        s.sendall(final_message.encode("utf-8"))
+                        print(f"\n[{self.device_name}] Sent encrypted data")
+
+                        # Wait for acknowledgment
+                        ack = s.recv(1024).decode("utf-8")
+                        if ack:
+                            print(
+                                f"\n[{self.device_name}] Received acknowledgment: {ack}"
+                            )
+
+                        time.sleep(5)
+            except socket.error as e:
+                print(
+                    f"[{self.device_name}] Connection error: {e}, retrying in 5 seconds..."
+                )
+                time.sleep(5)
 
     def run(self):
         """Continuously collect and send data every 2 seconds, maintaining a persistent connection."""
         print(f"[{self.device_name}] Starting data transmission to satellite")
         print("Press Ctrl+C to stop\n")
-        
+
         try:
-            # Establish a persistent connection to the satellite
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((self.satellite_host, self.satellite_port))
-                source_ip, source_port = s.getsockname()
-                print(
-                    f"[{self.device_name}] Connected to satellite at {self.satellite_host}:{self.satellite_port}"
-                )
-                print(
-                    f"[{self.device_name}] Tracker IP: {source_ip}, Tracker Port: {source_port}"
-                )
-                
-                # threading.Thread(target=self.sender_thread, args=(SECRET_KEY,), daemon=True).start()
+            threading.Thread(
+                target=self.sender_thread, args=(SECRET_KEY,), daemon=True
+            ).start()
 
-                while True:
-                    # self.collect_data(source_ip, source_port)
-                    # time.sleep(5)
-                    data = self.collect_data(source_ip, source_port)
-                    checksum = self.calculate_checksum(data)
-                    data["checksum"] = checksum
-
-                    iv, tag, encrypted_data = self.encrypt_data(data, SECRET_KEY)
-                    message = {
-                        "iv": iv.hex(),
-                        "encrypted_data": encrypted_data.hex(),
-                        "tag": tag.hex(),
-                    }
-
-                    final_message = json.dumps(message)
-                    print(
-                        f"\n[{self.device_name}] Data to be sent to satellite: {json.dumps(data, indent=4)}"
-                    )
-
-                    s.sendall(final_message.encode("utf-8"))
-                    print(f"\n[{self.device_name}] Sent encrypted data")
-
-                    # Wait for acknowledgment
-                    ack = s.recv(1024).decode("utf-8")
-                    if ack:
-                        print(f"\n[{self.device_name}] Received acknowledgment: {ack}")
-
-                    time.sleep(5)
+            while True:
+                time.sleep(1)
+                if not (
+                    self.source_ip and self.source_port
+                ):  # If haven't connected, continue waiting
+                    continue
+                self.collect_data(self.source_ip, self.source_port)
+                time.sleep(5)
         except KeyboardInterrupt:
             print(f"[{self.device_name}] Stopping transmission")
         except Exception as e:
@@ -195,6 +179,8 @@ class SatelliteEmulator:
     def __init__(self, host, port):
         self.host = host
         self.port = int(port)
+        
+        self.running = True
 
     def calculate_checksum(self, data):
         """Calculate SHA-256 checksum of the JSON-encoded data."""
@@ -219,16 +205,16 @@ class SatelliteEmulator:
             s.listen()
             print(f"[Satellite] Listening on {self.host}:{self.port}")
 
-            try:
+            while self.running:
 
-                while True:
+                try:
                     conn, addr = s.accept()
                     threading.Thread(
-                        target=self.handle_tracker, args=(conn, addr)
+                        target=self.handle_tracker, args=(conn, addr), daemon=True
                     ).start()
 
-            except KeyboardInterrupt:
-                print("[Satellite] Shutting down gracefully")
+                except KeyboardInterrupt:
+                    print("[Satellite] Shutting down gracefully")
 
     def handle_tracker(self, conn, addr):
 
@@ -277,9 +263,14 @@ class SatelliteEmulator:
                         f"\n[Satellite] Sent acknowledgment to {received_data['device_name']}"
                     )
 
-                # except (ConnectionAbortedError, ConnectionResetError):
-                #     print(f"[Satellite] Connection aborted by {addr}.")
+                except (ConnectionAbortedError, ConnectionResetError):
+                    print(f"[Satellite] Connection aborted by {addr}.")
 
                 except Exception as e:
                     print(f"[Satellite] Error in decryption/validation: {e}")
                     conn.sendall(b"Error: Decryption failed")
+        
+    # def shutdown(self):
+    #     self.running = False
+    #     print("[Satellite] Shutdown")
+
