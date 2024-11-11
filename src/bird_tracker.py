@@ -1,4 +1,3 @@
-import queue
 import random
 from utils.simulation import WildLifeTracker
 

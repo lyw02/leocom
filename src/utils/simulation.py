@@ -14,24 +14,6 @@ from cryptography.hazmat.backends import default_backend
 from utils.encryption import SECRET_KEY
 
 
-def simulate_location_and_health(device_name):
-    current_time = datetime.now()
-    latitude = random.uniform(-90.0, 90.0)
-    longitude = random.uniform(-180.0, 180.0)
-    depth = random.uniform(0, 11000)
-    heart_rate = random.uniform(20, 40)
-    body_temperature = random.uniform(36.0, 39.0)
-
-    msg = (
-        f"Time: {current_time.strftime("%Y-%m-%d %H:%M:%S")}\n"
-        f"Device: {device_name}\n"
-        f"Latitude: {latitude:.6f}, Longitude: {longitude:.6f}, Depth: {depth:.2f} m\n"
-        f"Heart Rate: {heart_rate:.1f} bpm, Body Temperature: {body_temperature:.1f} °C\n"
-        f"-----------------------------------------------------------------------------"
-    )
-    return msg
-
-
 class WildLifeTracker:
 
     def __init__(
@@ -69,7 +51,7 @@ class WildLifeTracker:
         timestamp = time.time()
 
         data = {
-            "datetime": datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S"),
+            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "device_name": self.device_name,
             "latitude": self.latitude,
             "longitude": self.longitude,
@@ -116,34 +98,44 @@ class WildLifeTracker:
                     print(
                         f"[{self.device_name}] Tracker IP: {self.source_ip}, Tracker Port: {self.source_port}"
                     )
+
+                    queued_count = self.message_queue.qsize()
+                    if queued_count > 0:
+                        print(f"[{self.device_name}] {queued_count} data in message queue, will send them first")
                     while True:
-                        # Wait for data to be available in the queue
-                        data = self.message_queue.get()
-                        # Process data
-                        checksum = self.calculate_checksum(data)
-                        data["checksum"] = checksum
-                        iv, tag, encrypted_data = self.encrypt_data(data, secret_key)
-                        message = {
-                            "iv": iv.hex(),
-                            "encrypted_data": encrypted_data.hex(),
-                            "tag": tag.hex(),
-                        }
-                        # Send the message
-                        final_message = json.dumps(message)
-                        print(
-                            f"\n[{self.device_name}] Data to be sent to satellite: {json.dumps(data, indent=4)}"
-                        )
-                        s.sendall(final_message.encode("utf-8"))
-                        print(f"\n[{self.device_name}] Sent encrypted data")
-
-                        # Wait for acknowledgment
-                        ack = s.recv(1024).decode("utf-8")
-                        if ack:
+                        
+                        try:
+                            data = self.message_queue.get_nowait()
+                            data["restored"] = queued_count > 0
+                            # Process data
+                            checksum = self.calculate_checksum(data)
+                            data["checksum"] = checksum
+                            iv, tag, encrypted_data = self.encrypt_data(data, secret_key)
+                            message = {
+                                "iv": iv.hex(),
+                                "encrypted_data": encrypted_data.hex(),
+                                "tag": tag.hex(),
+                            }
+                            # Send the message
+                            final_message = json.dumps(message)
                             print(
-                                f"\n[{self.device_name}] Received acknowledgment: {ack}"
+                                f"\n[{self.device_name}] Data to be sent to satellite: {json.dumps(data, indent=4)}"
                             )
+                            s.sendall(final_message.encode("utf-8"))
+                            print(f"\n[{self.device_name}] Sent encrypted data")
 
-                        time.sleep(5)
+                            # Wait for acknowledgment
+                            ack = s.recv(1024).decode("utf-8")
+                            if ack:
+                                print(
+                                    f"\n[{self.device_name}] Received acknowledgment: {ack}"
+                                )
+
+                            queued_count -= 1
+                            time.sleep(1)
+                        except queue.Empty:
+                            time.sleep(1)
+                            continue
             except socket.error as e:
                 print(
                     f"[{self.device_name}] Connection error: {e}, retrying in 5 seconds..."
@@ -167,6 +159,9 @@ class WildLifeTracker:
                 ):  # If haven't connected, continue waiting
                     continue
                 self.collect_data(self.source_ip, self.source_port)
+                print(
+                    f"[{self.device_name}] Adding data to message queue, {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
                 time.sleep(5)
         except KeyboardInterrupt:
             print(f"[{self.device_name}] Stopping transmission")
@@ -179,7 +174,7 @@ class SatelliteEmulator:
     def __init__(self, host, port):
         self.host = host
         self.port = int(port)
-        
+
         self.running = True
 
     def calculate_checksum(self, data):
@@ -201,6 +196,7 @@ class SatelliteEmulator:
     def listen_for_data(self):
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((self.host, self.port))
             s.listen()
             print(f"[Satellite] Listening on {self.host}:{self.port}")
@@ -221,11 +217,12 @@ class SatelliteEmulator:
         with conn:
             print(f"[Satellite] Connection established with {addr}")
             while True:
-                data = conn.recv(1024)
+                data = conn.recv(2048)
                 if not data:
                     print(f"[Satellite] Connection closed by {addr}")
                     break
 
+                print(f"====data len {len(data)}")
                 message = json.loads(data.decode("utf-8"))
                 iv = bytes.fromhex(message["iv"])
                 encrypted_data = bytes.fromhex(message["encrypted_data"])
@@ -269,8 +266,8 @@ class SatelliteEmulator:
                 except Exception as e:
                     print(f"[Satellite] Error in decryption/validation: {e}")
                     conn.sendall(b"Error: Decryption failed")
-        
-    # def shutdown(self):
-    #     self.running = False
-    #     print("[Satellite] Shutdown")
 
+    def shutdown(self):
+        self.running = False
+        self.server_socket.close()
+        print("[Satellite] Shutdown")
