@@ -11,7 +11,11 @@ Start in two different terminals:
 ```sh
 cd src
 
-python server.py
+python satellite.py
 
-python client.py
+python bird_tracker.py
+
+python marine_animal_tracker.oy
+
+python terrestrial_tracker.py
 ```
