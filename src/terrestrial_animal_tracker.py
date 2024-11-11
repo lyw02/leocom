@@ -1,4 +1,4 @@
-from utils.simulation import WildLifeTracker
+from utils.simulation.wildlife_tracker import WildLifeTracker
 
 
 class TerrestrialAnimalTracker(WildLifeTracker):

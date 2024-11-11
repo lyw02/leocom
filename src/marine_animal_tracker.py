@@ -1,5 +1,5 @@
 import random
-from utils.simulation import WildLifeTracker
+from utils.simulation.wildlife_tracker import WildLifeTracker
 
 
 class MarineAnimalTracker(WildLifeTracker):
