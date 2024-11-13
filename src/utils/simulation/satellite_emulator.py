@@ -46,7 +46,7 @@ class SatelliteEmulator:
             print(f"\n[Satellite] Received acknowledgment from Ground Station: {ack}")
     
     # Listen for data from trackers and send acknowledgment
-    def listen_for_data(self):
+    def listen_for_data(self, gs):
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -65,7 +65,7 @@ class SatelliteEmulator:
                 except KeyboardInterrupt:
                     print("[Satellite] Shutting down gracefully")
 
-    def handle_tracker(self, conn, addr):
+    def handle_tracker(self, conn, addr, gs):
 
         with conn:
             print(f"[Satellite] Connection established with {addr}")
