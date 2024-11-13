@@ -12,9 +12,11 @@ from utils.encryption import SECRET_KEY
 
 class SatelliteEmulator:
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, ground_ip, ground_port):
         self.host = host
         self.port = int(port)
+        self.ground_station_ip = ground_ip
+        self.ground_station_port = int(ground_port)
 
         self.running = True
 
@@ -33,6 +35,16 @@ class SatelliteEmulator:
         # Convert back to dictionary
         return json.loads(decrypted_data.decode("utf-8"))
 
+    def forward_to_ground_station(self, gs, data):
+        '''with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as gs:
+            gs.connect((self.ground_station_ip, self.ground_station_port))
+            print(f"[Satellite] Connected to Ground Station at {self.ground_station_ip}:{self.ground_station_port}")'''
+        gs.sendall(json.dumps(data).encode('utf-8'))
+        print("[Satellite] Data forwarded to ground station.")
+        ack = gs.recv(1024).decode('utf-8')
+        if ack:
+            print(f"\n[Satellite] Received acknowledgment from Ground Station: {ack}")
+    
     # Listen for data from trackers and send acknowledgment
     def listen_for_data(self):
 
@@ -63,7 +75,15 @@ class SatelliteEmulator:
                     print(f"[Satellite] Connection closed by {addr}")
                     break
 
-                message = json.loads(data.decode("utf-8"))
+                message = json.loads(data.decode('utf-8'))
+                print(f"\n\n[Satellite] Received data")
+                
+                self.forward_to_ground_station(gs, message)
+                ack_message = f"Data received and forwarded to Ground Station at {time.time()}"
+                conn.sendall(ack_message.encode('utf-8'))
+                print(f"\n[Satellite] Forwarded Message to Ground Station and Sent acknowledgment back")
+                
+                '''message = json.loads(data.decode("utf-8"))
                 iv = bytes.fromhex(message["iv"])
                 encrypted_data = bytes.fromhex(message["encrypted_data"])
                 tag = bytes.fromhex(message["tag"])
@@ -105,7 +125,7 @@ class SatelliteEmulator:
 
                 except Exception as e:
                     print(f"[Satellite] Error in decryption/validation: {e}")
-                    conn.sendall(b"Error: Decryption failed")
+                    conn.sendall(b"Error: Decryption failed")'''
 
     def shutdown(self):
         self.running = False
