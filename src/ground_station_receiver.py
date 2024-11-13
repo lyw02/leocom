@@ -94,18 +94,6 @@ class GroundStationReceiver:
                     conn.sendall(b"Error: Decryption failed")
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Emulate a Ground Station receiving data from Satellites.")
-    parser.add_argument('--ground_host', type=str, help="Ground Station IP address")
-    parser.add_argument('--ground_port', type=str, help="Ground Station port")
-    args = parser.parse_args()
-
-    if args.ground_host is None:
-        print("Please specify the IP Address of the Ground Station")
-        exit(1)
-    if args.ground_port is None:
-        print("Please specify the Ground Station port")
-        exit(1)
-
-    station = GroundStationReceiver(args.ground_host, args.ground_port)
+    
+    station = GroundStationReceiver("127.0.0.1", 5111)
     station.listen_for_data()
