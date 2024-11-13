@@ -5,8 +5,10 @@ import hashlib
 import threading
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+from utils.encryption import SECRET_KEY
 
-SECRET_KEY = b"supersupersupersecretkey12345678"  # Must match the server's key
+
+#SECRET_KEY = b"supersupersupersecretkey12345678"  # Must match the server's key
 
 class GroundStationReceiver:
     def __init__(self, host, port):
