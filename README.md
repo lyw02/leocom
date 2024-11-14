@@ -11,6 +11,10 @@ Start in two different terminals:
 ```sh
 cd src
 
+python satellite_network.py
+
+python ground_station.py
+
 python satellite.py
 
 python bird_tracker.py
