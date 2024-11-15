@@ -31,5 +31,5 @@ class MarineAnimalTracker(WildLifeTracker):
         return data
 
 
-tracker = MarineAnimalTracker("MarineAnimalTrackerDivice", "127.0.0.1", "5000")
+tracker = MarineAnimalTracker("MarineAnimalTrackerDevice", "127.0.0.1", "33301")
 tracker.run()

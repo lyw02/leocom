@@ -1,7 +1,13 @@
-import time
 import json
 import socket
 import threading
+import hashlib
+from datetime import datetime
+
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+
+from utils.encryption import SECRET_KEY
 
 
 class SatelliteNetwork:
@@ -17,6 +23,19 @@ class SatelliteNetwork:
             target=self.registration_server
         )
         self.registration_server_thread.start()
+        
+    def calculate_checksum(self, data):
+        """Calculate SHA-256 checksum of the JSON-encoded data."""
+        json_data = json.dumps(data, sort_keys=True).encode('utf-8')
+        return hashlib.sha256(json_data).hexdigest()
+
+    def decrypt_data(self, iv, encrypted_data, tag , key):
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend())
+        decryptor = cipher.decryptor()
+        decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+        # Convert back to dictionary
+        return json.loads(decrypted_data.decode('utf-8'))
 
     def registration_server(self):
         """Server that allows satellites to register themselves."""
@@ -35,6 +54,7 @@ class SatelliteNetwork:
                 ).start()
 
     def handle_registration(self, conn, addr):
+        
         """Handle incoming registration requests from satellites."""
         with conn:
 
@@ -43,23 +63,51 @@ class SatelliteNetwork:
                 if not data:
                     break
 
-                if data.startswith("register"):
-                    satellite_info = json.loads(data.split("register ")[1])
-                    self.satellites.append(satellite_info)
-                    ack_message = f"Satellite registered at {time.time()}"
-                    conn.sendall(ack_message.encode("utf-8"))
-                    print(f"[Network] Registered satellite at {satellite_info}")
-                elif data.startswith("deregister"):
-                    satellite_info = data.split("deregister ")[1]
-                    if satellite_info in self.satellites:
-                        self.satellites.remove(satellite_info)
-                        ack_message = f"Satellite deregistered at {time.time()}"
+                message = json.loads(data)
+                iv = bytes.fromhex(message["iv"])
+                encrypted_data = bytes.fromhex(message["encrypted_data"])
+                tag = bytes.fromhex(message["tag"])
+                
+                try:
+                    received_data = self.decrypt_data(iv, encrypted_data, tag, SECRET_KEY)
+                    received_checksum = received_data.pop("checksum", None)
+                    calculated_checksum = self.calculate_checksum(received_data)
+
+                    # Validate checksum
+                    if received_checksum != calculated_checksum:
+                        raise Exception
+                    
+                    data_content = received_data["content"]
+
+                    if data_content.startswith("register"):
+                        satellite_info = json.loads(data_content.split("register ")[1])
+                        if not any(s.get("addr") == satellite_info.get("addr") for s in self.satellites):
+                            self.satellites.append(satellite_info)
+                            ack_message = f'Satellite registered at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+                            conn.sendall(ack_message.encode("utf-8"))
+                            print(f"[Network] Registered satellite: {satellite_info}")
+                        else:
+                            ack_message = f"Satellite already registered"
+                            conn.sendall(ack_message.encode("utf-8"))
+                            print(f"[Network] Registered satellite: {satellite_info}")
+                    elif data_content.startswith("deregister"):
+                        satellite_info = data_content.split("deregister ")[1]
+                        if satellite_info in self.satellites:
+                            self.satellites.remove(satellite_info)
+                            ack_message = f'Satellite deregistered at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+                            conn.sendall(ack_message.encode("utf-8"))
+                            print(f"[Network] Deregistered satellite: {satellite_info}")
+                    elif data_content == "get_list":
+                        list_of_satellites = "".join(self.satellites.__str__())
+                        conn.sendall(list_of_satellites.encode('utf-8'))
+                        print("[Network] Sent list of satellites")
+                    else:
+                        ack_message = f'Incorrect command'
                         conn.sendall(ack_message.encode("utf-8"))
-                        print(f"[Network] Deregistered satellite at {satellite_info}")
-                elif data == "get_list":
-                    list_of_satellites = "".join(self.satellites.__str__())
-                    conn.sendall(list_of_satellites.encode('utf-8'))
-                    print("[Network] Sent list of satellites")
+                        print(f"[Network] Incorrect command")
+                except Exception as e:
+                    print(f"[Network] Error in decryption/validation: {e}")
+                    conn.sendall(b"Error: Decryption failed")
 
     # def perform_handover(self):
     #     # Handover to the next satellite in network

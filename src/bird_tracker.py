@@ -33,5 +33,5 @@ class BirdTracker(WildLifeTracker):
         return data
 
 
-tracker = BirdTracker("BirdTrackerDivice", "127.0.0.1", "5000")
+tracker = BirdTracker("BirdTrackerDevice", "127.0.0.1", "33300")
 tracker.run()

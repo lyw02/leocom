@@ -11,15 +11,15 @@ Start in two different terminals:
 ```sh
 cd src
 
-python satellite_network.py
+python3 satellite_network.py
 
-python ground_station.py
+python3 ground_station.py
 
-python satellite.py
+python3 satellite.py --name "Satellite-01" --host "10.35.70.20" --port 33700
 
-python bird_tracker.py
+python3 bird_tracker.py
 
-python marine_animal_tracker.oy
+python3 marine_animal_tracker.py
 
-python terrestrial_tracker.py
+python3 terrestrial_animal_tracker.py
 ```
