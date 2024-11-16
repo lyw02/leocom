@@ -6,30 +6,42 @@ import math
 import random
 import socket
 import threading
+import ast
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
 from utils.encryption import SECRET_KEY
+from ip_config import ground_station_host, ground_station_port
 
 
 class SatelliteEmulator:
 
-    def __init__(self, device_name, host, port, ground_ip, ground_port, gs):
+    def __init__(self, device_name, host, port, ground_ip, ground_port):
         self.device_name = device_name
         self.host = host
         self.port = int(port)
         self.ground_station_ip = ground_ip
         self.ground_station_port = int(ground_port)
-        self.gs = gs
+        # self.gs = gs
 
         self.ground_lat = 53.3437967
         self.ground_long = -6.2571465
-        self.latitude = random.uniform(-90.0, 90.0)
-        self.longitude = random.uniform(-180.0, 180.0)
-        self.altitude = 700.0  # in KMs
-        self.angle_increment = 0.1  # Controls speed of orbit simulation
-        self.current_angle = 0  # Starting angle
+        # self.latitude = random.uniform(-90.0, 90.0)
+        # self.longitude = random.uniform(-180.0, 180.0)
+        # self.altitude = 700.0  # in KMs
+        # self.angle_increment = 0.1  # Controls speed of orbit simulation
+        # self.current_angle = 0  # Starting angle
+        
+        self.orbit = {
+            "init_lat": random.uniform(-90.0, 90.0),
+            "init_long": random.uniform(-180.0, 180.0),
+            "inclination": random.uniform(0.0, 180.0),
+            "direction": random.choice([-1, 1]),
+            "period": 3600 * random.uniform(0.0, 24.0),
+            "start_time": time.time(),
+            "altitude": 700.0
+        }
 
         self.running = True
 
@@ -59,17 +71,23 @@ class SatelliteEmulator:
         ciphertext = encryptor.update(data_bytes) + encryptor.finalize()
         return iv, encryptor.tag, ciphertext
     
-    def update_position(self):
+    def calculate_position(self, orbit):
+        current_time = time.time()
+        earth_rotation_rate = 360 / 86400
+        
+        t = current_time - orbit["start_time"]
+        theta = (2 * math.pi * t) / orbit["period"]
 
-        while True:
-        # Simulate changes
-            self.current_angle += self.angle_increment
-            if self.current_angle >= 360:
-                self.current_angle -= 360
-            self.latitude = (self.latitude + math.sin(math.radians(self.current_angle)) * 0.5) % 90
-            self.longitude = (self.longitude + math.cos(math.radians(self.current_angle)) * 0.5) % 180
+        # Calculate longitude
+        earth_rotation = earth_rotation_rate * t
+        long = orbit["init_long"] + (theta * 180 / math.pi) * orbit["direction"] + earth_rotation
+        long = (long + 180) % 360 - 180  # Normalize longitude to [-180, 180]
 
-            time.sleep(5)
+        # Calculate latitude
+        lat = orbit["init_lat"] + math.sin(theta) * orbit["inclination"]
+        lat = max(min(lat, 90), -90)  # Normalize latitude to [-90, 90]
+
+        return lat, long
 
     def haversine(self, lat1, lon1, lat2, lon2):
         # Radius of Earth in kilometers
@@ -88,60 +106,75 @@ class SatelliteEmulator:
         return R * c
 
     def handover_data(self, data):
-        satellite_positions = [
-                ('Satellite1', 34.05, -118.25, 700.0),  # Position 1: Los Angeles area, 500 km altitude
-                ('Satellite2', 40.71, -74.00, 700.0),   # Position 2: New York area, 400 km altitude
-                ('Satellite3', -33.86, 151.20, 700.0),  # Position 3: Sydney area, 600 km altitude
-                ('Satellite4', 51.51, -0.13, 700.0),    # Position 4: London area, 550 km altitude
-                ('Satellite5', 35.68, 139.69, 700.0)    # Position 5: Tokyo area, 450 km altitude
-            ]
-        satellite_positions.append(('Ground Station', self.ground_lat, self.ground_long, 700.0))
+        satellite_positions = ast.literal_eval(self.get_satellites_list())
+        satellite_positions = [sp for sp in satellite_positions if sp["addr"] != f"{self.host}:{self.port}"]
+        satellite_positions.append({
+            "device_name": 'GroundStation',
+            "addr": f"{self.ground_station_ip}:{self.ground_station_port}",
+            "orbit": {
+                "init_lat": self.ground_lat,
+                "init_long": self.ground_long
+            }
+        })
         min_distance = float('inf')
         closest_position = None
         for position in satellite_positions:
-            name, latitude, longitude, altitude = position
-            #print('\nName : ', name)
-            #print('latitude : ', latitude)
-            #print('longitude : ', longitude)
-            #print('altitude : ', altitude)
-            horizontal_distance = self.haversine(self.latitude, self.longitude, latitude, longitude)
-            vertical_distance = abs(self.altitude - altitude)
-            distance = math.sqrt(horizontal_distance**2 + vertical_distance**2)
-            #distance = calculate_3d_distance(my_lat, my_long, my_alt, latitude, longitude, altitude)
-            #print('distance : ',distance)
+            # position = json.loads(position)
+            distance = 0
+            self_lat, self_long = self.calculate_position(self.orbit)
+            if position["device_name"] == "GroundStation":
+                horizontal_distance = self.haversine(self_lat, self_long, self.ground_lat, self.ground_long)
+                distance = horizontal_distance
+            else:
+                lat, long = self.calculate_position(position["orbit"])
+                horizontal_distance = self.haversine(self_lat, self_long, lat, long)
+                # vertical_distance = abs(self.altitude - altitude)
+                # distance = math.sqrt(horizontal_distance**2 + vertical_distance**2)
+                distance = horizontal_distance
+                
             if distance < min_distance:
                 min_distance = distance
                 closest_position = position
     
-        print(f"\nClosest satellite position: {closest_position[0]}")
+        print(f"\nClosest satellite: {closest_position["device_name"]}")
         print(f"Shortest distance: {min_distance:.2f} km")
         
-        if closest_position[0] != 'Ground Station':
+        if closest_position["device_name"] != 'GroundStation':
             
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as st:
-                st.connect(("127.0.0.1", 5005))
-                print(f"[Satellite] Connected to {closest_position[0]} at 127.0.0.1:5005")
+                h, p = closest_position["addr"].split(":")
+                st.connect((h, int(p)))
+                print(f"[Satellite] Connected to {closest_position["device_name"]} at {closest_position['addr']}")
 
                 st.sendall(json.dumps(data).encode('utf-8'))
-                print("[Satellite] Data forwarded to Satellite.")
+                print(f"[Satellite] Data forwarded to Satellite {closest_position['device_name']} at {closest_position['addr']}")
                 ack = st.recv(1024).decode('utf-8')
                 if ack:
                     print(f"\n[Satellite] Received acknowledgment from Ground Station: {ack}")
-        elif closest_position[0] == 'Ground Station':
-            self.forward_to_ground_station(self.gs, data)
+        elif closest_position["device_name"] == 'GroundStation':
+            self.forward_to_ground_station(data)
 
-    def forward_to_ground_station(self, gs, data):
-        gs.sendall(json.dumps(data).encode("utf-8"))
-        print("[Satellite] Data forwarded to ground station.")
-        ack = gs.recv(1024).decode("utf-8")
-        if ack:
-            print(f"\n[Satellite] Received acknowledgment from Ground Station: {ack}")
+    def forward_to_ground_station(self, data):
+        
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as gs:
+            gs.connect((ground_station_host, int(ground_station_port)))
+            gs.sendall(json.dumps(data).encode("utf-8"))
+            print("[Satellite] Data forwarded to ground station.")
+            ack = gs.recv(1024).decode("utf-8")
+            if ack:
+                print(f"\n[Satellite] Received acknowledgment from Ground Station: {ack}")
 
     def register_to_network(self, network_host, network_port):
         """Register this satellite to the SatelliteNetwork."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((network_host, int(network_port)))
-            data = {"content": f'register {json.dumps({"device_name": self.device_name, "addr": f"{self.host}:{self.port}"})}'}
+            data = {
+                "content": f'register {json.dumps({
+                    "device_name": self.device_name, 
+                    "addr": f"{self.host}:{self.port}",
+                    "orbit": self.orbit
+                    })}'
+            }
             checksum = self.calculate_checksum(data)
             data["checksum"] = checksum
             iv, tag, encrypted_data = self.encrypt_data(
@@ -207,7 +240,9 @@ class SatelliteEmulator:
             final_message = json.dumps(message)
             sock.sendall(final_message.encode("utf-8"))
             res = sock.recv(4096)
-            print(f"[Satellite] Received list of satellites:\n{res.decode('utf-8')}")
+            res = res.decode('utf-8')
+            print(f"[Satellite] Received list of satellites:\n{res}")
+            return res
 
     # Listen for data from trackers and send acknowledgment
     def listen_for_data(self):
@@ -242,14 +277,10 @@ class SatelliteEmulator:
                 message = json.loads(data.decode("utf-8"))
                 print(f"\n\n[Satellite] Received data")
 
-                self.forward_to_ground_station(self.gs, message)
-                ack_message = (
-                    f"Data received and forwarded to Ground Station at {time.time()}"
-                )
-                conn.sendall(ack_message.encode("utf-8"))
-                print(
-                    f"\n[Satellite] Forwarded Message to Ground Station and Sent acknowledgment back"
-                )
+                self.handover_data(message)
+                ack_message = f"Data received and forwarded at {time.time()}"
+                conn.sendall(ack_message.encode('utf-8'))
+                print(f"\n[Satellite] Forwarded Message and Sent acknowledgment back")
 
     def shutdown(self):
         self.running = False

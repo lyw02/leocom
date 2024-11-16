@@ -7,15 +7,11 @@ class MarineAnimalTracker(WildLifeTracker):
     def __init__(
         self,
         device_name,
-        satellite_host,
-        satellite_port,
         heart_rate_range=(20, 40),
         body_temperature_range=(36.0, 39.0),
     ):
         super().__init__(
             device_name,
-            satellite_host,
-            satellite_port,
             heart_rate_range,
             body_temperature_range,
         )
@@ -31,5 +27,5 @@ class MarineAnimalTracker(WildLifeTracker):
         return data
 
 
-tracker = MarineAnimalTracker("MarineAnimalTrackerDevice", "127.0.0.1", "33301")
+tracker = MarineAnimalTracker("MarineAnimalTrackerDevice")
 tracker.run()

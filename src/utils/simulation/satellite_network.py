@@ -19,10 +19,10 @@ class SatelliteNetwork:
         self.registration_host = registration_host
         self.registration_port = int(registration_port)
         self.registration_server_running = True
-        self.registration_server_thread = threading.Thread(
-            target=self.registration_server
-        )
-        self.registration_server_thread.start()
+        # self.registration_server_thread = threading.Thread(
+        #     target=self.registration_server
+        # )
+        # self.registration_server_thread.start()
         
     def calculate_checksum(self, data):
         """Calculate SHA-256 checksum of the JSON-encoded data."""
@@ -50,8 +50,9 @@ class SatelliteNetwork:
             while self.registration_server_running:
                 conn, addr = server_socket.accept()
                 threading.Thread(
-                    target=self.handle_registration, args=(conn, addr)
+                    target=self.handle_registration, args=(conn, addr), daemon=True
                 ).start()
+                # self.handle_registration(conn, addr)
 
     def handle_registration(self, conn, addr):
         
@@ -59,7 +60,8 @@ class SatelliteNetwork:
         with conn:
 
             while True:
-                data = conn.recv(1024).decode('utf-8')
+                data = conn.recv(2048).decode('utf-8')
+                print(f"data: {data}")
                 if not data:
                     break
 
@@ -78,6 +80,7 @@ class SatelliteNetwork:
                         raise Exception
                     
                     data_content = received_data["content"]
+                    print(data_content)
 
                     if data_content.startswith("register"):
                         satellite_info = json.loads(data_content.split("register ")[1])

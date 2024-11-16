@@ -6,12 +6,15 @@ import time
 import socket
 import threading
 import queue
+import math
+import ast
 from datetime import datetime
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
 from utils.encryption import SECRET_KEY
+from ip_config import registration_server_host, registration_server_port
 
 
 class WildLifeTracker:
@@ -19,14 +22,11 @@ class WildLifeTracker:
     def __init__(
         self,
         device_name,
-        satellite_host,
-        satellite_port,
         heart_rate_range,
         body_temperature_range,
     ):
         self.device_name = device_name
-        self.satellite_host = satellite_host
-        self.satellite_port = int(satellite_port)
+        
         self.latitude = random.uniform(-90.0, 90.0)
         self.longitude = random.uniform(-180.0, 180.0)
 
@@ -34,8 +34,32 @@ class WildLifeTracker:
         self.body_temperature = random.uniform(*body_temperature_range)
 
         self.message_queue = queue.Queue()
+        
+        self.source_ip = "127.0.0.1"
+        self.source_port = 5678
+        
+        # Get satellite list
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((registration_server_host, int(registration_server_port)))
+            data = {"content": "get_list"}
+            checksum = self.calculate_checksum(data)
+            data["checksum"] = checksum
+            iv, tag, encrypted_data = self.encrypt_data(
+                data, SECRET_KEY
+            )
+            message = {
+                "iv": iv.hex(),
+                "encrypted_data": encrypted_data.hex(),
+                "tag": tag.hex(),
+            }
+            final_message = json.dumps(message)
+            sock.sendall(final_message.encode("utf-8"))
+            res = sock.recv(4096)
+            res = res.decode('utf-8')
+            print(f"[Tracker] Received list of satellites:\n{res}")
+            self.satellite_list = ast.literal_eval(res)
 
-    def collect_data(self, source_ip, source_port):
+    def collect_data(self):
         # Simulate changes
         self.latitude += random.uniform(-0.001, 0.001)
         self.longitude += random.uniform(-0.001, 0.001)
@@ -58,10 +82,10 @@ class WildLifeTracker:
             "heart_rate": self.heart_rate,
             "body_temperature": self.body_temperature,
             "timestamp": timestamp,
-            "source_ip": source_ip,
-            "source_port": source_port,
-            "destination_ip": self.satellite_host,
-            "destination_port": self.satellite_port,
+            "source_ip": self.source_ip,
+            "source_port": self.source_port,
+            # "destination_ip": self.satellite_host,
+            # "destination_port": self.satellite_port,
         }
 
         return data
@@ -83,17 +107,116 @@ class WildLifeTracker:
         # print('result of encrypt_data :',iv + encryptor.tag + ciphertext)
         return iv, encryptor.tag, ciphertext
 
+    def get_satellite_list(self):
+        
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((registration_server_host, int(registration_server_port)))
+            data = {"content": "get_list"}
+            checksum = self.calculate_checksum(data)
+            data["checksum"] = checksum
+            iv, tag, encrypted_data = self.encrypt_data(
+                data, SECRET_KEY
+            )
+            message = {
+                "iv": iv.hex(),
+                "encrypted_data": encrypted_data.hex(),
+                "tag": tag.hex(),
+            }
+            final_message = json.dumps(message)
+            sock.sendall(final_message.encode("utf-8"))
+            res = sock.recv(4096)
+            res = res.decode('utf-8')
+            print(f"[Tracker] Received list of satellites:\n{res}")
+            self.satellite_list = ast.literal_eval(res)
+
+    def calculate_position(self, orbit):
+        current_time = time.time()
+        earth_rotation_rate = 360 / 86400
+        
+        t = current_time - orbit["start_time"]
+        theta = (2 * math.pi * t) / orbit["period"]
+
+        # Calculate longitude
+        earth_rotation = earth_rotation_rate * t
+        long = orbit["init_long"] + (theta * 180 / math.pi) * orbit["direction"] + earth_rotation
+        long = (long + 180) % 360 - 180  # Normalize longitude to [-180, 180]
+
+        # Calculate latitude
+        lat = orbit["init_lat"] + math.sin(theta) * orbit["inclination"]
+        lat = max(min(lat, 90), -90)  # Normalize latitude to [-90, 90]
+
+        return lat, long
+    
+    def closest_satellite(self):
+        closest_satellite = None
+        min_distance = float('inf')
+        
+        h = None
+        if self.height is not None:
+            h = self.height / 1000
+        elif self.depth is not None:
+            h = -self.depth / 1000
+        else:
+            h = 0
+
+        self.get_satellite_list()
+        for satellite in self.satellite_list:
+            satellite_lat, satellite_lon = self.calculate_position(satellite["orbit"])
+            distance = self.haversine_3d(self.latitude, self.longitude, h, satellite_lat, satellite_lon, satellite["orbit"]["altitude"])
+            print(f"Distance to satellite at ({satellite_lat}, {satellite_lon}): {distance:.2f} km")
+
+            if distance < min_distance:
+                min_distance = distance
+                closest_satellite = satellite
+
+        print(f"Closest satellite is at ({closest_satellite['device_name']}, {closest_satellite['addr']})")
+        return closest_satellite
+                
+    # def haversine(lat1, lon1, lat2, lon2):
+    #     R = 6371  # Earth radius in kilometers
+    #     phi1 = math.radians(lat1)
+    #     phi2 = math.radians(lat2)
+    #     delta_phi = math.radians(lat2 - lat1)
+    #     delta_lambda = math.radians(lon2 - lon1)
+
+    #     a = math.sin(delta_phi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)**2
+    #     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    #     distance = R * c  # in kilometers
+    #     return distance
+    
+    def haversine_3d(self, lat1, lon1, h1, lat2, lon2, h2):
+        R = 6371  # Earth radius in kilometers
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+
+        # Calculate 2D distance over the Earth's surface
+        a = math.sin(delta_phi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        d2 = R * c  # in kilometers
+
+        # Adjust for the height difference
+        delta_h = h2 - h1
+        distance = math.sqrt(d2**2 + delta_h**2)  # in kilometers
+        
+        return distance
+
     def sender_thread(self, secret_key):
+        print("sender")
 
         while True:
 
             try:
                 # Establish a persistent connection to the satellite
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.connect((self.satellite_host, self.satellite_port))
-                    self.source_ip, self.source_port = s.getsockname()
+                    closest_satellite = self.closest_satellite()
+                    satellite_host, satellite_port = closest_satellite["addr"].split(":")
+                    s.connect((satellite_host, int(satellite_port)))
+                    # self.source_ip, self.source_port = s.getsockname()
                     print(
-                        f"[{self.device_name}] Connected to satellite at {self.satellite_host}:{self.satellite_port}"
+                        f"[{self.device_name}] Connected to satellite at {satellite_host}:{satellite_port}"
                     )
                     print(
                         f"[{self.device_name}] Tracker IP: {self.source_ip}, Tracker Port: {self.source_port}"
@@ -162,7 +285,7 @@ class WildLifeTracker:
                     self.source_ip and self.source_port
                 ):  # If haven't connected, continue waiting
                     continue
-                self.collect_data(self.source_ip, self.source_port)
+                self.collect_data()
                 print(
                     f"[{self.device_name}] Adding data to message queue, {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                 )
