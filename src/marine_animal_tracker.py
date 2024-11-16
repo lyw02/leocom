@@ -16,16 +16,18 @@ class MarineAnimalTracker(WildLifeTracker):
             body_temperature_range,
         )
         self.depth = random.uniform(0, 11000)
+        self.height = None
 
-    def collect_data(self, source_ip, source_port):
+    def collect_data(self):
         self.depth += random.uniform(-1, 1)
         self.depth = max(0, min(11000, self.depth))
 
-        data = super().collect_data(source_ip, source_port)
+        data = super().collect_data()
         data.update(depth=self.depth)
+        self.message_queue.put(data)
 
         return data
 
-
-tracker = MarineAnimalTracker("MarineAnimalTrackerDevice")
+name = "MarineAnimalTrackerDevice" + str(random.randint(1, 1000))
+tracker = MarineAnimalTracker(name)
 tracker.run()

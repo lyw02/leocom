@@ -1,3 +1,4 @@
+import random
 from utils.simulation.wildlife_tracker import WildLifeTracker
 
 
@@ -14,9 +15,17 @@ class TerrestrialAnimalTracker(WildLifeTracker):
             heart_rate_range,
             body_temperature_range,
         )
+        self.height = None
+        self.depth = None
+    def collect_data(self):
+       
+        data = super().collect_data()
+                
+        self.message_queue.put(data)
+
+        return data
 
 
-tracker = TerrestrialAnimalTracker(
-    "TerrestrialAnimalTrackerDevice"
-)
+name = "TerrestrialAnimalTrackerDevice" + str(random.randint(1, 1000))
+tracker = TerrestrialAnimalTracker(name)
 tracker.run()

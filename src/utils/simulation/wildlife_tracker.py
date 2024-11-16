@@ -37,6 +37,7 @@ class WildLifeTracker:
         
         self.source_ip = "127.0.0.1"
         self.source_port = 5678
+
         
         # Get satellite list
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -56,7 +57,7 @@ class WildLifeTracker:
             sock.sendall(final_message.encode("utf-8"))
             res = sock.recv(4096)
             res = res.decode('utf-8')
-            print(f"[Tracker] Received list of satellites:\n{res}")
+            #print(f"\n[{self.device_name}] Received list of satellites:\n{res}")
             self.satellite_list = ast.literal_eval(res)
 
     def collect_data(self):
@@ -126,7 +127,7 @@ class WildLifeTracker:
             sock.sendall(final_message.encode("utf-8"))
             res = sock.recv(4096)
             res = res.decode('utf-8')
-            print(f"[Tracker] Received list of satellites:\n{res}")
+            print(f"\n[{self.device_name}] Received list of satellites:\n{res}")
             self.satellite_list = ast.literal_eval(res)
 
     def calculate_position(self, orbit):
@@ -160,6 +161,7 @@ class WildLifeTracker:
             h = 0
 
         self.get_satellite_list()
+        print('\n')
         for satellite in self.satellite_list:
             satellite_lat, satellite_lon = self.calculate_position(satellite["orbit"])
             distance = self.haversine_3d(self.latitude, self.longitude, h, satellite_lat, satellite_lon, satellite["orbit"]["altitude"])
@@ -204,7 +206,7 @@ class WildLifeTracker:
         return distance
 
     def sender_thread(self, secret_key):
-        print("sender")
+        #print("sender")
 
         while True:
 
@@ -214,7 +216,7 @@ class WildLifeTracker:
                     closest_satellite = self.closest_satellite()
                     satellite_host, satellite_port = closest_satellite["addr"].split(":")
                     s.connect((satellite_host, int(satellite_port)))
-                    # self.source_ip, self.source_port = s.getsockname()
+                    self.source_ip, self.source_port = s.getsockname()
                     print(
                         f"[{self.device_name}] Connected to satellite at {satellite_host}:{satellite_port}"
                     )
@@ -238,10 +240,12 @@ class WildLifeTracker:
                             iv, tag, encrypted_data = self.encrypt_data(
                                 data, secret_key
                             )
+                            path = self.device_name
                             message = {
                                 "iv": iv.hex(),
                                 "encrypted_data": encrypted_data.hex(),
                                 "tag": tag.hex(),
+                                "path": path,
                             }
                             # Send the message
                             final_message = json.dumps(message)

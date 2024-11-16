@@ -7,6 +7,20 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from utils.encryption import SECRET_KEY
 
+import logging
+import os
+import datetime
+
+def write_log(message):
+
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+
+    log_file = os.path.join(log_dir, f"log_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
+
+    logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(message)s')
+
+    logging.info(message)
 
 class GroundStationReceiver:
     def __init__(self, host, port):
@@ -46,7 +60,7 @@ class GroundStationReceiver:
         with conn:
             print(f"[Ground Station] Connection established with {addr}")
             while True:
-                data = conn.recv(1024)
+                data = conn.recv(4096)
                 if not data:
                     print(f"[Ground Station] Connection closed by {addr}")
                     break
@@ -58,6 +72,9 @@ class GroundStationReceiver:
                 iv = bytes.fromhex(message["iv"])
                 encrypted_data = bytes.fromhex(message["encrypted_data"])
                 tag = bytes.fromhex(message["tag"])
+                path = message["path"] + "-->Ground Station\n"
+                print("\nMessage Travel Path: ", path)
+                write_log('\nMessage Travel Path: ' + str(path))
                 '''received_data = json.loads(data.decode('utf-8'))
 
                 ack_message = f"Data received from {received_data['device_name']} at {time.time()}"
@@ -68,6 +85,10 @@ class GroundStationReceiver:
                 # Decrypt data
                 try:
                     received_data = self.decrypt_data(iv, encrypted_data, tag, SECRET_KEY)
+                    final_time = time.time()
+                    initial_time = received_data['timestamp']
+                    print('\nTotal Time taken in message travel : ',final_time - initial_time)
+                    write_log('Total Time taken in message travel : ' + str(final_time - initial_time))
                 
 
                     received_checksum = received_data.pop("checksum", None)
@@ -76,11 +97,13 @@ class GroundStationReceiver:
                     # Validate checksum
                     if received_checksum == calculated_checksum:
                         print(f"[Ground Station] Data received successfully with valid checksum: {received_checksum}")
-                        ack_message = f"Data received from Satellite at {time.time()}"
+                        ack_message = f"Data received from Satellite at {final_time}"
                         print(f"\n\n[Ground Station] Received data : {received_data}")
+                        write_log('Received Data : ' + str(received_data) + '\n')
                     else:
                         print(f"[Ground Station] Checksum mismatch! Received: {received_checksum}, Calculated: {calculated_checksum}")
-                        ack_message = "Error: Checksum mismatch detected!"
+                        ack_message = "\nError: Checksum mismatch detected!"
+                        write_log('Checksum mismatch! Received: ' + str(received_checksum) +', Calculated: ' + str(calculated_checksum) + '\n')
                     
 
                     # Send acknowledgment back to the tracker

@@ -61,7 +61,7 @@ class SatelliteNetwork:
 
             while True:
                 data = conn.recv(2048).decode('utf-8')
-                print(f"data: {data}")
+                #print(f"data: {data}")
                 if not data:
                     break
 
@@ -80,7 +80,7 @@ class SatelliteNetwork:
                         raise Exception
                     
                     data_content = received_data["content"]
-                    print(data_content)
+                    # print(data_content)
 
                     if data_content.startswith("register"):
                         satellite_info = json.loads(data_content.split("register ")[1])

@@ -28,6 +28,6 @@ class BirdTracker(WildLifeTracker):
 
         return data
 
-
-tracker = BirdTracker("BirdTrackerDevice")
+name = "BirdTrackerDevice" + str(random.randint(1, 1000))
+tracker = BirdTracker(name)
 tracker.run()

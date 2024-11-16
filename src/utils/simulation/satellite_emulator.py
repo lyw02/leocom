@@ -107,7 +107,8 @@ class SatelliteEmulator:
 
     def handover_data(self, data):
         satellite_positions = ast.literal_eval(self.get_satellites_list())
-        satellite_positions = [sp for sp in satellite_positions if sp["addr"] != f"{self.host}:{self.port}"]
+        #satellite_positions = [sp for sp in satellite_positions if sp["addr"] != f"{self.host}:{self.port}"]
+        satellite_positions = [sp for sp in satellite_positions if sp["device_name"] not in data["path"].split("-->")]
         satellite_positions.append({
             "device_name": 'GroundStation',
             "addr": f"{self.ground_station_ip}:{self.ground_station_port}",
@@ -118,6 +119,7 @@ class SatelliteEmulator:
         })
         min_distance = float('inf')
         closest_position = None
+        print("\n")
         for position in satellite_positions:
             # position = json.loads(position)
             distance = 0
@@ -125,18 +127,21 @@ class SatelliteEmulator:
             if position["device_name"] == "GroundStation":
                 horizontal_distance = self.haversine(self_lat, self_long, self.ground_lat, self.ground_long)
                 distance = horizontal_distance
+                print(f"Distance to Ground Station : {distance}")
             else:
                 lat, long = self.calculate_position(position["orbit"])
                 horizontal_distance = self.haversine(self_lat, self_long, lat, long)
                 # vertical_distance = abs(self.altitude - altitude)
                 # distance = math.sqrt(horizontal_distance**2 + vertical_distance**2)
                 distance = horizontal_distance
-                
+                print(f"Distance to ({lat},{long}) : {distance}")
+
+            
             if distance < min_distance:
                 min_distance = distance
                 closest_position = position
     
-        print(f"\nClosest satellite: {closest_position["device_name"]}")
+        print(f"\nClosest Device: {closest_position["device_name"]}")
         print(f"Shortest distance: {min_distance:.2f} km")
         
         if closest_position["device_name"] != 'GroundStation':
@@ -144,13 +149,13 @@ class SatelliteEmulator:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as st:
                 h, p = closest_position["addr"].split(":")
                 st.connect((h, int(p)))
-                print(f"[Satellite] Connected to {closest_position["device_name"]} at {closest_position['addr']}")
+                print(f"[{self.device_name}] Connected to {closest_position["device_name"]} at {closest_position['addr']}")
 
                 st.sendall(json.dumps(data).encode('utf-8'))
-                print(f"[Satellite] Data forwarded to Satellite {closest_position['device_name']} at {closest_position['addr']}")
+                print(f"[{self.device_name}] Data forwarded to Satellite {closest_position['device_name']} at {closest_position['addr']}")
                 ack = st.recv(1024).decode('utf-8')
                 if ack:
-                    print(f"\n[Satellite] Received acknowledgment from Ground Station: {ack}")
+                    print(f"\n[{self.device_name}] Received acknowledgment from Satellite: {ack}")
         elif closest_position["device_name"] == 'GroundStation':
             self.forward_to_ground_station(data)
 
@@ -159,10 +164,10 @@ class SatelliteEmulator:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as gs:
             gs.connect((ground_station_host, int(ground_station_port)))
             gs.sendall(json.dumps(data).encode("utf-8"))
-            print("[Satellite] Data forwarded to ground station.")
+            print(f"[{self.device_name}] Data forwarded to  ground station.")
             ack = gs.recv(1024).decode("utf-8")
             if ack:
-                print(f"\n[Satellite] Received acknowledgment from Ground Station: {ack}")
+                print(f"\n[{self.device_name}] Received acknowledgment from Ground Station: {ack}")
 
     def register_to_network(self, network_host, network_port):
         """Register this satellite to the SatelliteNetwork."""
@@ -187,7 +192,7 @@ class SatelliteEmulator:
             }
             final_message = json.dumps(message)
             sock.sendall(final_message.encode("utf-8"))
-            print("sent")
+            #print("sent")
             ack = sock.recv(1024).decode("utf-8")
             print(f"ack: {ack}")
             if ack:
@@ -219,7 +224,7 @@ class SatelliteEmulator:
             if ack:
                 print(f"\n[{self.device_name}] Received acknowledgment: {ack}")
                 print(
-                    f"[Satellite] {self.device_name} {self.host}:{self.port} Deregistered from network at {self.network_host}:{self.network_port}"
+                    f"[{self.device_name}] {self.device_name} {self.host}:{self.port} Deregistered from network at {self.network_host}:{self.network_port}"
                 )
 
     def get_satellites_list(self):
@@ -241,7 +246,7 @@ class SatelliteEmulator:
             sock.sendall(final_message.encode("utf-8"))
             res = sock.recv(4096)
             res = res.decode('utf-8')
-            print(f"[Satellite] Received list of satellites:\n{res}")
+            print(f"\n[{self.device_name}] Received list of satellites:\n{res}")
             return res
 
     # Listen for data from trackers and send acknowledgment
@@ -251,7 +256,7 @@ class SatelliteEmulator:
             # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((self.host, self.port))
             s.listen()
-            print(f"[Satellite] Listening on {self.host}:{self.port}")
+            print(f"[{self.device_name}] Listening on {self.host}:{self.port}")
 
             while self.running:
 
@@ -267,20 +272,23 @@ class SatelliteEmulator:
     def handle_tracker(self, conn, addr):
 
         with conn:
-            print(f"[Satellite] Connection established with {addr}")
+            print(f"[{self.device_name}] Connection established with {addr}")
             while True:
                 data = conn.recv(2048)
                 if not data:
-                    print(f"[Satellite] Connection closed by {addr}")
+                    print(f"[{self.device_name}] Connection closed by {addr}")
                     break
 
                 message = json.loads(data.decode("utf-8"))
-                print(f"\n\n[Satellite] Received data")
+                print(f"\n\n[{self.device_name}] Received data")
+                message["path"] += "-->" + self.device_name
+
+                print("\nMessage Travel Path: ", message["path"])
 
                 self.handover_data(message)
                 ack_message = f"Data received and forwarded at {time.time()}"
                 conn.sendall(ack_message.encode('utf-8'))
-                print(f"\n[Satellite] Forwarded Message and Sent acknowledgment back")
+                print(f"\n[{self.device_name}] Forwarded Message and Sent acknowledgment back")
 
     def shutdown(self):
         self.running = False
