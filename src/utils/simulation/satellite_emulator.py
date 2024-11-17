@@ -141,7 +141,7 @@ class SatelliteEmulator:
                 min_distance = distance
                 closest_position = position
     
-        print(f"\nClosest Device: {closest_position["device_name"]}")
+        print(f"\nClosest Device: {closest_position['device_name']}")
         print(f"Shortest distance: {min_distance:.2f} km")
         
         if closest_position["device_name"] != 'GroundStation':
@@ -149,7 +149,7 @@ class SatelliteEmulator:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as st:
                 h, p = closest_position["addr"].split(":")
                 st.connect((h, int(p)))
-                print(f"[{self.device_name}] Connected to {closest_position["device_name"]} at {closest_position['addr']}")
+                print(f"[{self.device_name}] Connected to {closest_position['device_name']} at {closest_position['addr']}")
 
                 st.sendall(json.dumps(data).encode('utf-8'))
                 print(f"[{self.device_name}] Data forwarded to Satellite {closest_position['device_name']} at {closest_position['addr']}")
@@ -174,11 +174,11 @@ class SatelliteEmulator:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((network_host, int(network_port)))
             data = {
-                "content": f'register {json.dumps({
+                "content": 'register ' + json.dumps({
                     "device_name": self.device_name, 
                     "addr": f"{self.host}:{self.port}",
                     "orbit": self.orbit
-                    })}'
+                })
             }
             checksum = self.calculate_checksum(data)
             data["checksum"] = checksum

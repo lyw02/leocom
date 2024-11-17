@@ -22,6 +22,8 @@ class WildLifeTracker:
     def __init__(
         self,
         device_name,
+        source_ip,
+        source_port,
         heart_rate_range,
         body_temperature_range,
     ):
@@ -35,8 +37,8 @@ class WildLifeTracker:
 
         self.message_queue = queue.Queue()
         
-        self.source_ip = "127.0.0.1"
-        self.source_port = 5678
+        self.source_ip = source_ip
+        self.source_port = source_port
 
         
         # Get satellite list
