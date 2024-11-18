@@ -7,6 +7,8 @@ import random
 import socket
 import threading
 import ast
+import signal
+import sys
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
@@ -193,19 +195,15 @@ class SatelliteEmulator:
             }
             final_message = json.dumps(message)
             sock.sendall(final_message.encode("utf-8"))
-            print("sent")
             ack = sock.recv(1024).decode("utf-8")
-            print(f"ack: {ack}")
             if ack:
                 print(f"\n[{self.device_name}] Received acknowledgment: {ack}")
                 self.network_host = network_host
                 self.network_port = network_port
 
     def deregister_from_network(self):
-        print("dereg func")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.network_host, int(self.network_port)))
-            print(f"self.network_host, int(self.network_port): {self.network_host} {int(self.network_port)}")
             data = {"content": f"deregister {self.host}:{self.port}"}
             checksum = self.calculate_checksum(data)
             data["checksum"] = checksum
@@ -218,11 +216,8 @@ class SatelliteEmulator:
                 "tag": tag.hex(),
             }
             final_message = json.dumps(message)
-            print("final msg")
             sock.sendall(final_message.encode("utf-8"))
-            print("sent")
             ack = sock.recv(1024).decode("utf-8")
-            print(f"ack: {ack}")
             if ack:
                 print(f"\n[{self.device_name}] Received acknowledgment: {ack}")
                 print(
@@ -293,3 +288,12 @@ class SatelliteEmulator:
                 ack_message = f"Data received and forwarded at {time.time()}"
                 conn.sendall(ack_message.encode('utf-8'))
                 print(f"\n[{self.device_name}] Forwarded Message and Sent acknowledgment back")
+                
+    
+
+    def handle_sigterm(self, signal_number, frame):
+        print("[Satellite] Shutting down gracefully")
+        self.deregister_from_network()
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
