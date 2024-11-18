@@ -215,6 +215,9 @@ class WildLifeTracker:
             try:
                 # Establish a persistent connection to the satellite
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    
+                    if self.device_name.startswith("MarineAnimalTrackerDevice"):
+                        print(f"[{self.device_name}] Relaying message through closest node on the surface")
                     closest_satellite = self.closest_satellite()
                     satellite_host, satellite_port = closest_satellite["addr"].split(":")
                     s.connect((satellite_host, int(satellite_port)))

@@ -1,3 +1,5 @@
+import os
+import logging
 import json
 import socket
 import threading
@@ -10,6 +12,17 @@ from cryptography.hazmat.backends import default_backend
 from utils.encryption import SECRET_KEY
 
 
+def write_log(message):
+
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+
+    log_file = os.path.join(log_dir, f"log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
+
+    logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(message)s')
+
+    logging.info(message)
+    
 class SatelliteNetwork:
 
     def __init__(self, registration_host, registration_port):
@@ -19,10 +32,6 @@ class SatelliteNetwork:
         self.registration_host = registration_host
         self.registration_port = int(registration_port)
         self.registration_server_running = True
-        # self.registration_server_thread = threading.Thread(
-        #     target=self.registration_server
-        # )
-        # self.registration_server_thread.start()
         
     def calculate_checksum(self, data):
         """Calculate SHA-256 checksum of the JSON-encoded data."""
@@ -43,9 +52,8 @@ class SatelliteNetwork:
             server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server_socket.bind((self.registration_host, self.registration_port))
             server_socket.listen()
-            print(
-                f"[Network] Registration server listening on {self.registration_host}:{self.registration_port}"
-            )
+            print(f"[Network] Registration server listening on {self.registration_host}:{self.registration_port}")
+            write_log(f"[Network] Registration server listening on {self.registration_host}:{self.registration_port}")
 
             while self.registration_server_running:
                 conn, addr = server_socket.accept()
@@ -61,7 +69,6 @@ class SatelliteNetwork:
 
             while True:
                 data = conn.recv(2048).decode('utf-8')
-                #print(f"data: {data}")
                 if not data:
                     break
 
@@ -80,7 +87,6 @@ class SatelliteNetwork:
                         raise Exception
                     
                     data_content = received_data["content"]
-                    # print(data_content)
 
                     if data_content.startswith("register"):
                         satellite_info = json.loads(data_content.split("register ")[1])
@@ -89,27 +95,33 @@ class SatelliteNetwork:
                             ack_message = f'Satellite registered at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
                             conn.sendall(ack_message.encode("utf-8"))
                             print(f"[Network] Registered satellite: {satellite_info}")
+                            write_log(f"[Network] Registered satellite: {satellite_info}")
                         else:
                             ack_message = f"Satellite already registered"
                             conn.sendall(ack_message.encode("utf-8"))
-                            print(f"[Network] Registered satellite: {satellite_info}")
+                            print(f"[Network] Already registered satellite: {satellite_info}")
+                            write_log(f"[Network] Already registered satellite: {satellite_info}")
                     elif data_content.startswith("deregister"):
                         satellite_info = data_content.split("deregister ")[1]
-                        if satellite_info in self.satellites:
-                            self.satellites.remove(satellite_info)
+                        if any(satellite['addr'] == satellite_info for satellite in self.satellites):
+                            self.satellites = [satellite for satellite in self.satellites if satellite['addr'] != satellite_info]
                             ack_message = f'Satellite deregistered at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
                             conn.sendall(ack_message.encode("utf-8"))
                             print(f"[Network] Deregistered satellite: {satellite_info}")
+                            write_log(f"[Network] Deregistered satellite: {satellite_info}")
                     elif data_content == "get_list":
                         list_of_satellites = "".join(self.satellites.__str__())
                         conn.sendall(list_of_satellites.encode('utf-8'))
                         print("[Network] Sent list of satellites")
+                        write_log("[Network] Sent list of satellites")
                     else:
                         ack_message = f'Incorrect command'
                         conn.sendall(ack_message.encode("utf-8"))
                         print(f"[Network] Incorrect command")
+                        write_log("[Network] Incorrect command")
                 except Exception as e:
                     print(f"[Network] Error in decryption/validation: {e}")
+                    write_log(f"[Network] Error in decryption/validation: {e}")
                     conn.sendall(b"Error: Decryption failed")
 
     # def perform_handover(self):

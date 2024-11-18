@@ -38,7 +38,7 @@ class SatelliteEmulator:
             "init_long": random.uniform(-180.0, 180.0),
             "inclination": random.uniform(0.0, 180.0),
             "direction": random.choice([-1, 1]),
-            "period": 3600 * random.uniform(0.0, 24.0),
+            "period": 3600 * random.uniform(0.0, 24.0) / 100, # make it move faster
             "start_time": time.time(),
             "altitude": 700.0
         }
@@ -173,6 +173,7 @@ class SatelliteEmulator:
         """Register this satellite to the SatelliteNetwork."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((network_host, int(network_port)))
+            self.server_socket = sock
             data = {
                 "content": 'register ' + json.dumps({
                     "device_name": self.device_name, 
@@ -192,22 +193,20 @@ class SatelliteEmulator:
             }
             final_message = json.dumps(message)
             sock.sendall(final_message.encode("utf-8"))
-            #print("sent")
+            print("sent")
             ack = sock.recv(1024).decode("utf-8")
             print(f"ack: {ack}")
             if ack:
-                # print(
-                #     f"[Satellite] {self.device_name} {self.host}:{self.port} Registered to network at {network_host}:{network_port}"
-                # )
                 print(f"\n[{self.device_name}] Received acknowledgment: {ack}")
                 self.network_host = network_host
                 self.network_port = network_port
 
     def deregister_from_network(self):
-
+        print("dereg func")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.network_host, int(self.network_port)))
-            data = {"content": f"deregister {self.host} {self.port}"}
+            print(f"self.network_host, int(self.network_port): {self.network_host} {int(self.network_port)}")
+            data = {"content": f"deregister {self.host}:{self.port}"}
             checksum = self.calculate_checksum(data)
             data["checksum"] = checksum
             iv, tag, encrypted_data = self.encrypt_data(
@@ -219,8 +218,11 @@ class SatelliteEmulator:
                 "tag": tag.hex(),
             }
             final_message = json.dumps(message)
+            print("final msg")
             sock.sendall(final_message.encode("utf-8"))
+            print("sent")
             ack = sock.recv(1024).decode("utf-8")
+            print(f"ack: {ack}")
             if ack:
                 print(f"\n[{self.device_name}] Received acknowledgment: {ack}")
                 print(
@@ -258,16 +260,18 @@ class SatelliteEmulator:
             s.listen()
             print(f"[{self.device_name}] Listening on {self.host}:{self.port}")
 
-            while self.running:
+            try: 
 
-                try:
+                while self.running:
+
                     conn, addr = s.accept()
                     threading.Thread(
-                        target=self.handle_tracker, args=(conn, addr)
+                        target=self.handle_tracker, args=(conn, addr), daemon=True
                     ).start()
 
-                except KeyboardInterrupt:
-                    print("[Satellite] Shutting down gracefully")
+            except KeyboardInterrupt:
+                self.deregister_from_network()
+                print("[Satellite] Shutting down gracefully")
 
     def handle_tracker(self, conn, addr):
 
@@ -289,9 +293,3 @@ class SatelliteEmulator:
                 ack_message = f"Data received and forwarded at {time.time()}"
                 conn.sendall(ack_message.encode('utf-8'))
                 print(f"\n[{self.device_name}] Forwarded Message and Sent acknowledgment back")
-
-    def shutdown(self):
-        self.running = False
-        self.deregister_from_network(self.network_host, self.network_port)
-        self.server_socket.close()
-        print("[Satellite] Shutdown")

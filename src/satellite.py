@@ -1,24 +1,12 @@
-import signal
-import socket
-
 from utils.simulation.satellite_emulator import SatelliteEmulator
 from ip_config import ground_station_host, ground_station_port, registration_server_host, registration_server_port
 
 
 def main(name, host, port):
-    print([ground_station_host, ground_station_port])
     satellite = SatelliteEmulator(name, host, port, ground_station_host, ground_station_port)
     satellite.register_to_network(registration_server_host, registration_server_port)
     satellite.get_satellites_list()
-    
     satellite.listen_for_data()
-
-# def signal_handler(signal, frame):
-#     print("[Satellite Network] Shutting down all satellites...")
-#     # for satellite in satellite_network.satellites:
-#     #     satellite.shutdown()
-
-# signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == "__main__":
     import argparse
@@ -38,6 +26,4 @@ if __name__ == "__main__":
         print("Please specify the Satellite port")
         exit(1)
 
-    # satellite = SatelliteEmulator(args.name, args.host, args.port)
-    # satellite.listen_for_data()
     main(args.name, args.host, args.port)
