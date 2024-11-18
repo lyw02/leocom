@@ -39,6 +39,7 @@ class WildLifeTracker:
         
         self.source_ip = source_ip
         self.source_port = source_port
+        self.message_order = 0
 
         
         # Get satellite list
@@ -74,10 +75,12 @@ class WildLifeTracker:
         self.longitude = max(-180.0, min(180.0, self.longitude))
         self.heart_rate = max(20, min(40, self.heart_rate))
         self.body_temperature = max(36.0, min(39.0, self.body_temperature))
+        self.message_order += 1
 
         timestamp = time.time()
 
         data = {
+            "Message Order": self.message_order,
             "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "device_name": self.device_name,
             "latitude": self.latitude,
@@ -215,9 +218,8 @@ class WildLifeTracker:
             try:
                 # Establish a persistent connection to the satellite
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    
                     if self.device_name.startswith("MarineAnimalTrackerDevice"):
-                        print(f"[{self.device_name}] Relaying message through closest node on the surface")
+                        print(f"[{self.device_name}] Relaying message through the closest node on the surface to LEO Satellites")
                     closest_satellite = self.closest_satellite()
                     satellite_host, satellite_port = closest_satellite["addr"].split(":")
                     s.connect((satellite_host, int(satellite_port)))
@@ -294,6 +296,7 @@ class WildLifeTracker:
                     self.source_ip and self.source_port
                 ):  # If haven't connected, continue waiting
                     continue
+                
                 self.collect_data()
                 print(
                     f"[{self.device_name}] Adding data to message queue, {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
