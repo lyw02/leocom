@@ -1,6 +1,6 @@
 #!/bin/bash
 
-n=$5
+n=5
 
 start_port=33200
 
