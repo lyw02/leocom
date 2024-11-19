@@ -6,7 +6,7 @@ start_port=33200
 
 trackers=("bird_tracker.py" "marine_animal_tracker.py" "terrestrial_animal_tracker.py")
 
-host=10.35.70.20
+host=$(hostname -i)
 
 for ((i=0; i<n; i++))
 do

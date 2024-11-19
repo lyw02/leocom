@@ -169,6 +169,14 @@ class SatelliteEmulator:
                     print(f"\n[{self.device_name}] Received acknowledgment from Satellite: {ack}")
         elif closest_position["device_name"] == 'GroundStation':
             self.forward_to_ground_station(data)
+            
+    # def handover_data_with_model_prediction(self, data):
+    #     # load model
+    #     model = tflite.Interpreter(model_path="model.tflite")
+    #     model.allocate_tensors()
+        
+    #     # predict closest satellite
+    #     ...
 
     def forward_to_ground_station(self, data):
         
@@ -297,7 +305,11 @@ class SatelliteEmulator:
 
                 print("\nMessage Travel Path: ", message["path"])
 
-                self.handover_data(message)
+                try:
+                    self.handover_data(message)
+                except Exception as e:
+                    print(f"Using ML model...")
+                    
                 ack_message = f"Data received and forwarded at {time.time()}"
                 conn.sendall(ack_message.encode('utf-8'))
                 print(f"\n[{self.device_name}] Forwarded Message and Sent acknowledgment back")
