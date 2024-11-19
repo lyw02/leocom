@@ -1,23 +1,29 @@
-import signal
-import threading
 from utils.simulation.satellite_emulator import SatelliteEmulator
-from utils.simulation.satellite_network import SatelliteNetwork
+from ip_config import ground_station_host, ground_station_port, registration_server_host, registration_server_port
 
 
-satellite1 = SatelliteEmulator("127.0.0.1", "5000")
-satellite2 = SatelliteEmulator("127.0.0.1", "5001")
+def main(name, host, port):
+    satellite = SatelliteEmulator(name, host, port, ground_station_host, ground_station_port)
+    satellite.register_to_network(registration_server_host, registration_server_port)
+    satellite.get_satellites_list()
+    satellite.listen_for_data()
 
-satellite_network = SatelliteNetwork([satellite1, satellite2])
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Emulate a satellite")
+    parser.add_argument('--name', type=str, help="The name of the satellite")
+    parser.add_argument('--host', type=str, help="Satellite IP address")
+    parser.add_argument('--port', type=str, help="Satellite port")
+    args = parser.parse_args()
 
-def signal_handler(signal, frame):
-    print("[Satellite Network] Shutting down all satellites...")
-    for satellite in satellite_network.satellites:
-        satellite.shutdown()
+    if args.name is None:
+        print("Please specify the Satellite Name")
+        exit(1)
+    if args.host is None:
+        print("Please specify the IP Address of the Satellite")
+        exit(1)
+    if args.port is None:
+        print("Please specify the Satellite port")
+        exit(1)
 
-signal.signal(signal.SIGINT, signal_handler)
-
-for satellite in satellite_network.satellites:
-    threading.Thread(target=satellite.listen_for_data, daemon=True).start()
-
-# Start the data routing and handover simulation
-satellite_network.start_data_routing()
+    main(args.name, args.host, args.port)

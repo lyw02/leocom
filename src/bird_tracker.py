@@ -7,31 +7,48 @@ class BirdTracker(WildLifeTracker):
     def __init__(
         self,
         device_name,
-        satellite_host,
-        satellite_port,
+        source_ip,
+        source_port,
         heart_rate_range=(100, 600),
         body_temperature_range=(39.0, 43.0),
     ):
         super().__init__(
             device_name,
-            satellite_host,
-            satellite_port,
+            source_ip,
+            source_port,
             heart_rate_range,
             body_temperature_range,
         )
         self.height = random.uniform(0, 9000)
 
-    def collect_data(self, source_ip, source_port):
+    def collect_data(self):
         self.height += random.uniform(-5, 5)
         self.height = max(0, min(11000, self.height))
 
-        data = super().collect_data(source_ip, source_port)
+        data = super().collect_data()
         data.update(height=self.height)
         
         self.message_queue.put(data)
 
         return data
 
+def main(host, port):
+    name = "BirdTrackerDevice" + str(random.randint(1, 1000))
+    tracker = BirdTracker(name, host, port)
+    tracker.run()
 
-tracker = BirdTracker("BirdTrackerDivice", "127.0.0.1", "5000")
-tracker.run()
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Emulate a bird tracker")
+    parser.add_argument('--host', type=str, help="Bird Tracker IP address")
+    parser.add_argument('--port', type=str, help="Bird Tracker port")
+    args = parser.parse_args()
+
+    if args.host is None:
+        print("Please specify the IP Address of the Bird Tracker")
+        exit(1)
+    if args.port is None:
+        print("Please specify the Bird Tracker port")
+        exit(1)
+
+    main(args.host, args.port)

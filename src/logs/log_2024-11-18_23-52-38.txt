@@ -1,0 +1,31 @@
+2024-11-18 23:52:38,581 - [Network] Registration server listening on 127.0.0.1:33500
+2024-11-18 23:54:17,907 - [Network] Registered satellite: {'device_name': 's1', 'addr': '127.0.0.1:5001', 'orbit': {'init_lat': -64.35289899396163, 'init_long': -53.27572069519681, 'inclination': 178.26148081238875, 'direction': 1, 'period': 537.1948097333739, 'start_time': 1731974057.5306046, 'altitude': 700.0}}
+2024-11-18 23:54:17,909 - [Network] Sent list of satellites
+2024-11-18 23:54:51,732 - [Network] Sent list of satellites
+2024-11-18 23:54:51,743 - [Network] Sent list of satellites
+2024-11-18 23:54:52,751 - [Network] Sent list of satellites
+2024-11-18 23:54:58,930 - [Network] Sent list of satellites
+2024-11-19 00:04:19,475 - [Network] Sent list of satellites
+2024-11-19 00:04:19,482 - [Network] Sent list of satellites
+2024-11-19 00:04:20,542 - [Network] Sent list of satellites
+2024-11-19 00:07:50,936 - [Network] Sent list of satellites
+2024-11-19 00:07:50,939 - [Network] Sent list of satellites
+2024-11-19 00:07:51,990 - [Network] Sent list of satellites
+2024-11-19 00:08:15,619 - [Network] Sent list of satellites
+2024-11-19 00:08:15,628 - [Network] Sent list of satellites
+2024-11-19 00:08:16,682 - [Network] Sent list of satellites
+2024-11-19 00:14:02,115 - [Network] Sent list of satellites
+2024-11-19 00:14:02,120 - [Network] Sent list of satellites
+2024-11-19 00:14:02,123 - [Network] Deregistered satellite: 127.0.0.1:5001
+2024-11-19 00:14:11,897 - [Network] Registered satellite: {'device_name': 's1', 'addr': '127.0.0.1:5001', 'orbit': {'init_lat': -69.50157701617005, 'init_long': -98.97943333507418, 'inclination': 133.56337991579107, 'direction': -1, 'period': 557.239994344133, 'start_time': 1731975251.8229935, 'altitude': 700.0}}
+2024-11-19 00:14:11,898 - [Network] Sent list of satellites
+2024-11-19 00:14:18,621 - [Network] Sent list of satellites
+2024-11-19 00:14:18,627 - [Network] Sent list of satellites
+2024-11-19 00:14:19,669 - [Network] Sent list of satellites
+2024-11-19 00:15:46,196 - [Network] Sent list of satellites
+2024-11-19 00:15:46,201 - [Network] Sent list of satellites
+2024-11-19 00:15:47,217 - [Network] Sent list of satellites
+2024-11-19 00:15:53,268 - [Network] Sent list of satellites
+2024-11-19 00:18:16,184 - [Network] Sent list of satellites
+2024-11-19 00:18:16,189 - [Network] Sent list of satellites
+2024-11-19 00:18:16,192 - [Network] Deregistered satellite: 127.0.0.1:5001
