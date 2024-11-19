@@ -29,6 +29,8 @@ class SatelliteEmulator:
 
         self.ground_lat = 53.3437967
         self.ground_long = -6.2571465
+
+        self.delay_message = 0.0
         # self.latitude = random.uniform(-90.0, 90.0)
         # self.longitude = random.uniform(-180.0, 180.0)
         # self.altitude = 700.0  # in KMs
@@ -145,6 +147,10 @@ class SatelliteEmulator:
     
         print(f"\nClosest Device: {closest_position['device_name']}")
         print(f"Shortest distance: {min_distance:.2f} km")
+
+        speed_of_light = 299_792.458
+        travel_time = min_distance / speed_of_light
+        self.delay_message = travel_time
         
         if closest_position["device_name"] != 'GroundStation':
             
@@ -153,6 +159,9 @@ class SatelliteEmulator:
                 st.connect((h, int(p)))
                 print(f"[{self.device_name}] Connected to {closest_position['device_name']} at {closest_position['addr']}")
 
+                print(f"\nSimulating Message Travel Delay for {self.delay_message:.6f} seconds")
+                time.sleep(self.delay_message)
+                
                 st.sendall(json.dumps(data).encode('utf-8'))
                 print(f"[{self.device_name}] Data forwarded to Satellite {closest_position['device_name']} at {closest_position['addr']}")
                 ack = st.recv(1024).decode('utf-8')
@@ -165,6 +174,10 @@ class SatelliteEmulator:
         
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as gs:
             gs.connect((ground_station_host, int(ground_station_port)))
+
+            print(f"\nSimulating Message Travel Delay for {self.delay_message:.6f} seconds")
+            time.sleep(self.delay_message)
+            
             gs.sendall(json.dumps(data).encode("utf-8"))
             print(f"[{self.device_name}] Data forwarded to  ground station.")
             ack = gs.recv(1024).decode("utf-8")

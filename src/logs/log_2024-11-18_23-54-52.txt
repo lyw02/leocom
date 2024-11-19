@@ -1,0 +1,48 @@
+2024-11-18 23:54:52,761 - 
+Message Travel Path: BirdTrackerDevice866-->s1-->Ground Station
+
+2024-11-18 23:54:52,917 - Total Time taken in message travel : 0.17510461807250977
+2024-11-18 23:54:52,919 - Received Data : {'Message Order': 1, 'datetime': '2024-11-18 23:54:52', 'device_name': 'BirdTrackerDevice866', 'latitude': -29.722454699724405, 'longitude': -0.6747699739589005, 'heart_rate': 40, 'body_temperature': 39.0, 'timestamp': 1731974092.741086, 'source_ip': '127.0.0.1', 'source_port': 54438, 'height': 8303.611785467812, 'restored': False}
+
+2024-11-18 23:54:58,936 - 
+Message Travel Path: BirdTrackerDevice866-->s1-->Ground Station
+
+2024-11-18 23:54:58,939 - Total Time taken in message travel : 0.19633150100708008
+2024-11-18 23:54:58,941 - Received Data : {'Message Order': 2, 'datetime': '2024-11-18 23:54:58', 'device_name': 'BirdTrackerDevice866', 'latitude': -29.72228396033895, 'longitude': -0.6745558521688054, 'heart_rate': 39.581356315226984, 'body_temperature': 38.949218718840115, 'timestamp': 1731974098.7426565, 'source_ip': '127.0.0.1', 'source_port': 54438, 'height': 8300.857213937976, 'restored': False}
+
+2024-11-19 00:04:20,551 - 
+Message Travel Path: BirdTrackerDevice777-->s1-->Ground Station
+
+2024-11-19 00:04:20,552 - Total Time taken in message travel : 0.07169890403747559
+2024-11-19 00:04:20,556 - Received Data : {'Message Order': 1, 'datetime': '2024-11-19 00:04:20', 'device_name': 'BirdTrackerDevice777', 'latitude': -50.547226329991716, 'longitude': 90.3652114345517, 'heart_rate': 40, 'body_temperature': 39.0, 'timestamp': 1731974660.4799821, 'source_ip': '127.0.0.1', 'source_port': 52196, 'height': 8128.829715012862, 'restored': False}
+
+2024-11-19 00:07:51,997 - 
+Message Travel Path: TerrestrialAnimalTrackerDevice153-->s1-->Ground Station
+
+2024-11-19 00:07:51,999 - Total Time taken in message travel : 0.060500383377075195
+2024-11-19 00:07:52,001 - Received Data : {'Message Order': 1, 'datetime': '2024-11-19 00:07:51', 'device_name': 'TerrestrialAnimalTrackerDevice153', 'latitude': 26.2946982080858, 'longitude': 87.70761997826213, 'heart_rate': 40, 'body_temperature': 36.183111590139816, 'timestamp': 1731974871.9381957, 'source_ip': '127.0.0.1', 'source_port': 52300, 'restored': False}
+
+2024-11-19 00:08:16,687 - 
+Message Travel Path: MarineAnimalTrackerDevice13-->s1-->Ground Station
+
+2024-11-19 00:08:16,688 - Total Time taken in message travel : 0.06352710723876953
+2024-11-19 00:08:16,689 - Received Data : {'Message Order': 1, 'datetime': '2024-11-19 00:08:16', 'device_name': 'MarineAnimalTrackerDevice13', 'latitude': 38.79195305548271, 'longitude': -20.987648643897128, 'heart_rate': 39.470950863753316, 'body_temperature': 38.295704926340505, 'timestamp': 1731974896.6246147, 'source_ip': '127.0.0.1', 'source_port': 52315, 'depth': 5933.215551612506, 'restored': False}
+
+2024-11-19 00:14:19,722 - 
+Message Travel Path: MarineAnimalTrackerDevice885-->s1-->Ground Station
+
+2024-11-19 00:14:19,724 - Total Time taken in message travel : 0.09802627563476562
+2024-11-19 00:14:19,725 - Received Data : {'Message Order': 1, 'datetime': '2024-11-19 00:14:19', 'device_name': 'MarineAnimalTrackerDevice885', 'latitude': 37.10496837561278, 'longitude': -131.58394397494087, 'heart_rate': 37.1376753827, 'body_temperature': 37.21724695503778, 'timestamp': 1731975259.625534, 'source_ip': '127.0.0.1', 'source_port': 52497, 'depth': 1993.477713010325, 'restored': False}
+
+2024-11-19 00:15:47,249 - 
+Message Travel Path: TerrestrialAnimalTrackerDevice838-->s1-->Ground Station
+
+2024-11-19 00:15:47,251 - Total Time taken in message travel : 0.05146360397338867
+2024-11-19 00:15:47,252 - Received Data : {'Message Order': 1, 'datetime': '2024-11-19 00:15:47', 'device_name': 'TerrestrialAnimalTrackerDevice838', 'latitude': 42.128224097721656, 'longitude': -142.20371862215228, 'heart_rate': 40, 'body_temperature': 36.061080576172316, 'timestamp': 1731975347.199641, 'source_ip': '127.0.0.1', 'source_port': 52542, 'restored': False}
+
+2024-11-19 00:15:53,300 - 
+Message Travel Path: TerrestrialAnimalTrackerDevice838-->s1-->Ground Station
+
+2024-11-19 00:15:53,302 - Total Time taken in message travel : 0.09978652000427246
+2024-11-19 00:15:53,304 - Received Data : {'Message Order': 2, 'datetime': '2024-11-19 00:15:53', 'device_name': 'TerrestrialAnimalTrackerDevice838', 'latitude': 42.127539807317504, 'longitude': -142.20274254980293, 'heart_rate': 40, 'body_temperature': 36.02481025698927, 'timestamp': 1731975353.2013743, 'source_ip': '127.0.0.1', 'source_port': 52542, 'restored': False}
+

@@ -40,6 +40,7 @@ class WildLifeTracker:
         self.source_ip = source_ip
         self.source_port = source_port
         self.message_order = 0
+        self.delay_message = 0.0
 
         
         # Get satellite list
@@ -177,6 +178,13 @@ class WildLifeTracker:
                 closest_satellite = satellite
 
         print(f"Closest satellite is at ({closest_satellite['device_name']}, {closest_satellite['addr']})")
+        
+        speed_of_light = 299_792.458
+        travel_time = min_distance / speed_of_light
+        self.delay_message = travel_time
+        #print(f"Simulating Travel Delay for {self.delay_message:.6f} seconds")
+        #time.sleep(self.delay_message)
+        
         return closest_satellite
                 
     # def haversine(lat1, lon1, lat2, lon2):
@@ -259,6 +267,8 @@ class WildLifeTracker:
                             print(
                                 f"\n[{self.device_name}] Data to be sent to satellite: {json.dumps(data, indent=4)}"
                             )
+                            print(f"\nSimulating Message Travel Delay for {self.delay_message:.6f} seconds")
+                            time.sleep(self.delay_message)
                             s.sendall(final_message.encode("utf-8"))
                             print(f"\n[{self.device_name}] Sent encrypted data")
 
