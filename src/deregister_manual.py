@@ -31,7 +31,7 @@ def deregister(host, port):
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.connect((registration_server_host, int(registration_server_port)))
-        data = {"content": f"deregister {self.host}:{self.port}"}
+        data = {"content": f"deregister {host}:{port}"}
         checksum = calculate_checksum(data)
         data["checksum"] = checksum
         iv, tag, encrypted_data = encrypt_data(
