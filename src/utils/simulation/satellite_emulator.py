@@ -50,7 +50,7 @@ class SatelliteEmulator:
         self.running = True
 
     def calculate_checksum(self, data):
-        """Calculate SHA-256 checksum of the JSON-encoded data."""
+
         json_data = json.dumps(data, sort_keys=True).encode("utf-8")
         return hashlib.sha256(json_data).hexdigest()
 
@@ -61,11 +61,10 @@ class SatelliteEmulator:
         decryptor = cipher.decryptor()
         decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
 
-        # Convert back to dictionary
         return json.loads(decrypted_data.decode("utf-8"))
 
     def encrypt_data(self, data, key):
-        iv = os.urandom(12)  # Generate a random 12-byte IV
+        iv = os.urandom(12)
         encryptor = Cipher(
             algorithms.AES(key), modes.GCM(iv), backend=default_backend()
         ).encryptor()
@@ -82,31 +81,25 @@ class SatelliteEmulator:
         t = current_time - orbit["start_time"]
         theta = (2 * math.pi * t) / orbit["period"]
 
-        # Calculate longitude
         earth_rotation = earth_rotation_rate * t
         long = orbit["init_long"] + (theta * 180 / math.pi) * orbit["direction"] + earth_rotation
-        long = (long + 180) % 360 - 180  # Normalize longitude to [-180, 180]
+        long = (long + 180) % 360 - 180 
 
-        # Calculate latitude
         lat = orbit["init_lat"] + math.sin(theta) * orbit["inclination"]
-        lat = max(min(lat, 90), -90)  # Normalize latitude to [-90, 90]
+        lat = max(min(lat, 90), -90) 
 
         return lat, long
 
     def haversine(self, lat1, lon1, lat2, lon2):
-        # Radius of Earth in kilometers
         R = 6371.0
         
-        # Convert degrees to radians
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
         
-        # Haversine formula
         dlat = lat2 - lat1
         dlon = lon2 - lon1
         a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         
-        # Distance in kilometers
         return R * c
 
     def handover_data(self, data):
@@ -127,6 +120,7 @@ class SatelliteEmulator:
         for position in satellite_positions:
             # position = json.loads(position)
             distance = 0
+            #get latest geoposition of the satellite 
             self_lat, self_long = self.calculate_position(self.orbit)
             if position["device_name"] == "GroundStation":
                 horizontal_distance = self.haversine(self_lat, self_long, self.ground_lat, self.ground_long)
@@ -148,6 +142,7 @@ class SatelliteEmulator:
         print(f"\nClosest Device: {closest_position['device_name']}")
         print(f"Shortest distance: {min_distance:.2f} km")
 
+        #simulate delay based on distance
         speed_of_light = 299_792.458
         travel_time = min_distance / speed_of_light
         self.delay_message = travel_time
@@ -156,6 +151,7 @@ class SatelliteEmulator:
             
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as st:
                 h, p = closest_position["addr"].split(":")
+                #connect to closest satellite
                 st.connect((h, int(p)))
                 print(f"[{self.device_name}] Connected to {closest_position['device_name']} at {closest_position['addr']}")
 
@@ -193,7 +189,7 @@ class SatelliteEmulator:
                 print(f"\n[{self.device_name}] Received acknowledgment from Ground Station: {ack}")
 
     def register_to_network(self, network_host, network_port):
-        """Register this satellite to the SatelliteNetwork."""
+        #register satellite to the network
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((network_host, int(network_port)))
             self.server_socket = sock
@@ -246,7 +242,7 @@ class SatelliteEmulator:
                 )
 
     def get_satellites_list(self):
-
+        
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.network_host, int(self.network_port)))
             data = {"content": "get_list"}
@@ -267,7 +263,7 @@ class SatelliteEmulator:
             print(f"\n[{self.device_name}] Received list of satellites:\n{res}")
             return res
 
-    # Listen for data from trackers and send acknowledgment
+    # Listen for data from trackers
     def listen_for_data(self):
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
