@@ -98,12 +98,12 @@ class WildLifeTracker:
         return data
 
     def calculate_checksum(self, data):
-        """Calculate SHA-256 checksum of the JSON-encoded data."""
+        
         json_data = json.dumps(data, sort_keys=True).encode("utf-8")
         return hashlib.sha256(json_data).hexdigest()
 
     def encrypt_data(self, data, key):
-        iv = os.urandom(12)  # Generate a random 12-byte IV
+        iv = os.urandom(12)  
         encryptor = Cipher(
             algorithms.AES(key), modes.GCM(iv), backend=default_backend()
         ).encryptor()
@@ -143,14 +143,14 @@ class WildLifeTracker:
         t = current_time - orbit["start_time"]
         theta = (2 * math.pi * t) / orbit["period"]
 
-        # Calculate longitude
+        
         earth_rotation = earth_rotation_rate * t
         long = orbit["init_long"] + (theta * 180 / math.pi) * orbit["direction"] + earth_rotation
-        long = (long + 180) % 360 - 180  # Normalize longitude to [-180, 180]
+        long = (long + 180) % 360 - 180  
 
         # Calculate latitude
         lat = orbit["init_lat"] + math.sin(theta) * orbit["inclination"]
-        lat = max(min(lat, 90), -90)  # Normalize latitude to [-90, 90]
+        lat = max(min(lat, 90), -90)  
 
         return lat, long
     
@@ -201,20 +201,20 @@ class WildLifeTracker:
     #     return distance
     
     def haversine_3d(self, lat1, lon1, h1, lat2, lon2, h2):
-        R = 6371  # Earth radius in kilometers
+        R = 6371  
         phi1 = math.radians(lat1)
         phi2 = math.radians(lat2)
         delta_phi = math.radians(lat2 - lat1)
         delta_lambda = math.radians(lon2 - lon1)
 
-        # Calculate 2D distance over the Earth's surface
+        
         a = math.sin(delta_phi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)**2
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        d2 = R * c  # in kilometers
+        d2 = R * c 
 
-        # Adjust for the height difference
+        
         delta_h = h2 - h1
-        distance = math.sqrt(d2**2 + delta_h**2)  # in kilometers
+        distance = math.sqrt(d2**2 + delta_h**2)  
         
         return distance
 
@@ -224,10 +224,11 @@ class WildLifeTracker:
         while True:
 
             try:
-                # Establish a persistent connection to the satellite
+                
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     if self.device_name.startswith("MarineAnimalTrackerDevice"):
                         print(f"[{self.device_name}] Relaying message through the closest node on the surface to LEO Satellites")
+                    #finding closest satellite
                     closest_satellite = self.closest_satellite()
                     satellite_host, satellite_port = closest_satellite["addr"].split(":")
                     s.connect((satellite_host, int(satellite_port)))
@@ -249,7 +250,7 @@ class WildLifeTracker:
                         try:
                             data = self.message_queue.get_nowait()
                             data["restored"] = queued_count > 0
-                            # Process data
+                            #calculate checksum and encrypt
                             checksum = self.calculate_checksum(data)
                             data["checksum"] = checksum
                             iv, tag, encrypted_data = self.encrypt_data(
@@ -262,7 +263,7 @@ class WildLifeTracker:
                                 "tag": tag.hex(),
                                 "path": path,
                             }
-                            # Send the message
+                            
                             final_message = json.dumps(message)
                             print(
                                 f"\n[{self.device_name}] Data to be sent to satellite: {json.dumps(data, indent=4)}"
@@ -272,7 +273,7 @@ class WildLifeTracker:
                             s.sendall(final_message.encode("utf-8"))
                             print(f"\n[{self.device_name}] Sent encrypted data")
 
-                            # Wait for acknowledgment
+                            
                             ack = s.recv(1024).decode("utf-8")
                             if ack:
                                 print(
@@ -291,7 +292,7 @@ class WildLifeTracker:
                 time.sleep(5)
 
     def run(self):
-        """Continuously collect and send data every 2 seconds, maintaining a persistent connection."""
+        
         print(f"[{self.device_name}] Starting data transmission to satellite")
         print("Press Ctrl+C to stop\n")
 
@@ -304,7 +305,7 @@ class WildLifeTracker:
                 time.sleep(1)
                 if not (
                     self.source_ip and self.source_port
-                ):  # If haven't connected, continue waiting
+                ):  
                     continue
                 
                 self.collect_data()
