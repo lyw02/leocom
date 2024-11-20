@@ -1,7 +1,7 @@
 import random
 from utils.simulation.wildlife_tracker import WildLifeTracker
 
-
+#imports WildLifeTracker which controls all trackers
 class BirdTracker(WildLifeTracker):
 
     def __init__(
@@ -39,6 +39,7 @@ def main(host, port):
 
 if __name__ == "__main__":
     import argparse
+    #takes IP Address and port of this tracker as argument
     parser = argparse.ArgumentParser(description="Emulate a bird tracker")
     parser.add_argument('--host', type=str, help="Bird Tracker IP address")
     parser.add_argument('--port', type=str, help="Bird Tracker port")
