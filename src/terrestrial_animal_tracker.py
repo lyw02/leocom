@@ -1,7 +1,7 @@
 import random
 from utils.simulation.wildlife_tracker import WildLifeTracker
 
-
+#imports WildLifeTracker which controls all trackers
 class TerrestrialAnimalTracker(WildLifeTracker):
 
     def __init__(
