@@ -13,11 +13,11 @@ from utils.encryption import SECRET_KEY
 
 
 def write_log(message):
-
+    #storing logs for the network
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
 
-    log_file = os.path.join(log_dir, f"log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
+    log_file = os.path.join(log_dir, f"log_network_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
 
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(message)s')
 
@@ -26,7 +26,7 @@ def write_log(message):
 class SatelliteNetwork:
 
     def __init__(self, registration_host, registration_port):
-        self.satellites = []  # List of SatelliteEmulator instances
+        self.satellites = []  
         self.current_satellite_index = 0
 
         self.registration_host = registration_host
@@ -43,11 +43,11 @@ class SatelliteNetwork:
         decryptor = cipher.decryptor()
         decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
 
-        # Convert back to dictionary
+        
         return json.loads(decrypted_data.decode('utf-8'))
 
     def registration_server(self):
-        """Server that allows satellites to register themselves."""
+        
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
             server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server_socket.bind((self.registration_host, self.registration_port))
@@ -64,7 +64,7 @@ class SatelliteNetwork:
 
     def handle_registration(self, conn, addr):
         
-        """Handle incoming registration requests from satellites."""
+        #Handle incoming registration requests from satellites
         with conn:
 
             while True:
