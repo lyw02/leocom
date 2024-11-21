@@ -226,6 +226,8 @@ class WildLifeTracker:
             try:
                 
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    #Check if Marine Tracker is generating data, then relay to surface marine node due to radio waves being unable to work in water
+                    #This is a future work, based on research, not actually implemented currently.
                     if self.device_name.startswith("MarineAnimalTrackerDevice"):
                         print(f"[{self.device_name}] Relaying message through the closest node on the surface to LEO Satellites")
                     #finding closest satellite
