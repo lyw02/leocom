@@ -1,25 +1,15 @@
 ### Low Earth Orbit Satellites Communication
 
-Install:
+Start:
 
 ```sh
-pip -r requirements.txt
+bash runme.sh
 ```
 
-Start in two different terminals:
+This command will run a registration server, a ground station, 5 satellites and 5 random trackers on current Pi.
+
+Use command to see output:
 
 ```sh
-cd src
-
-python3 satellite_network.py
-
-python3 ground_station.py
-
-python3 satellite.py --name "Satellite-01" --host "10.35.70.20" --port 33700
-
-python3 bird_tracker.py
-
-python3 marine_animal_tracker.py
-
-python3 terrestrial_animal_tracker.py
+vi ground_station.log
 ```
